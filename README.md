@@ -112,12 +112,8 @@ Open `http://localhost:5173` in your browser.
 
 ![Good Results Detail](./screenshots/good-results-detail.png)
 
-![Good Results Detail 2](./screenshots/good-results-detail2.png)
-
 ### Improvement Needed Example
 ![Bad Results Overview](./screenshots/bad-results-overview.png)
-
-![Bad Results Detail](./screenshots/bad-results-detail.png)
 
 ### Answer Evaluation Dimensions
 
