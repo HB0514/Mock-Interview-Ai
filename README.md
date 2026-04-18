@@ -218,3 +218,9 @@ This project was built for a hackathon. Issues and PRs are welcome!
 3. Commit your changes (`git commit -m 'Add your feature'`)
 4. Push to the branch (`git push origin feature/your-feature`)
 5. Open a Pull Request
+
+---
+
+## Additional Documents
+
+- [Hackathon Idea Document](./docs/Likelion%20Hackathon%20Idea.docx)
