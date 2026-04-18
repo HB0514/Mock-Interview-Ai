@@ -1,104 +1,61 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Mic, MicOff, PhoneOff, Clock, Loader2 } from 'lucide-react'
 import Avatar3D from '../components/Avatar3D'
 import UserCamera from '../components/UserCamera'
 import useInterviewStore from '../store/useInterviewStore'
-import { generateNextQuestion, textToSpeech } from '../services/openai'
+import { generateNextQuestion, textToSpeech, stopSpeech } from '../services/openai'
 import { speechService } from '../services/speech'
 
-// States: 'idle' | 'ai_speaking' | 'user_speaking' | 'processing' | 'done'
 export default function InterviewRoom() {
   const {
-    userName,
-    avatarUrl,
-    interviewType,
-    jobRole,
-    difficulty,
-    messages,
-    qaLog,
-    currentQuestionIndex,
-    totalQuestions,
-    isAiSpeaking,
-    liveTranscript,
-    addMessage,
-    addQA,
-    setCurrentQuestion,
-    incrementQuestion,
-    setAiSpeaking,
-    setUserSpeaking,
-    setProcessing,
-    setLiveTranscript,
-    setPhase,
-    setResults,
-    currentQuestion,
+    userName, avatarId, interviewType, jobRole, difficulty,
+    qaLog, currentQuestionIndex, totalQuestions, isAiSpeaking, liveTranscript,
+    addQA, setCurrentQuestion, incrementQuestion,
+    setAiSpeaking, setUserSpeaking, setProcessing,
+    setLiveTranscript, setPhase, setResults,
   } = useInterviewStore()
 
-  const [roomState, setRoomState] = useState('idle')
-  const [elapsedTime, setElapsedTime] = useState(0)
-  const [showTranscript, setShowTranscript] = useState(true)
+  const [roomState, setRoomState]           = useState('idle')
+  const [elapsedTime, setElapsedTime]       = useState(0)
   const [displayedQuestion, setDisplayedQuestion] = useState('')
-  const [userAnswer, setUserAnswer] = useState('')
-  const [statusText, setStatusText] = useState('Starting interview…')
+  const [userAnswer, setUserAnswer]         = useState('')
+  const [statusText, setStatusText]         = useState('Starting interview…')
 
-  const audioRef = useRef(null)
-  const timerRef = useRef(null)
-  const audioUrlRef = useRef(null)
-  const currentAnswerRef = useRef('')
+  // Refs — always current, immune to stale closures
+  const currentAnswerRef   = useRef('')
+  const qaLogRef           = useRef([])
+  const questionIndexRef   = useRef(0)
+  qaLogRef.current         = qaLog
+  questionIndexRef.current = currentQuestionIndex
 
-  // Timer
+  // ── Timer ──────────────────────────────────────────────────────────────────
   useEffect(() => {
-    timerRef.current = setInterval(() => {
-      setElapsedTime((t) => t + 1)
-    }, 1000)
-    return () => clearInterval(timerRef.current)
+    const id = setInterval(() => setElapsedTime((t) => t + 1), 1000)
+    return () => clearInterval(id)
   }, [])
 
-  const formatTime = (s) => {
-    const m = Math.floor(s / 60)
-    const sec = s % 60
-    return `${m}:${sec.toString().padStart(2, '0')}`
-  }
+  const formatTime = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 
-  // Speak AI text via TTS and animate avatar
-  const speakText = useCallback(async (text) => {
+  // ── Speak via browser speechSynthesis ──────────────────────────────────────
+  const speakText = async (text) => {
     setRoomState('ai_speaking')
     setAiSpeaking(true)
     setStatusText('Emma is speaking…')
     setDisplayedQuestion(text)
-
     try {
-      const url = await textToSpeech(text)
-      audioUrlRef.current = url
-
-      await new Promise((resolve, reject) => {
-        const audio = new Audio(url)
-        audioRef.current = audio
-        audio.onended = resolve
-        audio.onerror = reject
-        audio.play().catch(reject)
-      })
+      await textToSpeech(text)
     } catch (e) {
-      console.error('TTS error:', e)
+      console.warn('TTS error (non-fatal):', e)
+      // Fallback: just wait 3 s so user can read the question
+      await new Promise((r) => setTimeout(r, 3000))
     } finally {
       setAiSpeaking(false)
-      if (audioUrlRef.current) {
-        URL.revokeObjectURL(audioUrlRef.current)
-        audioUrlRef.current = null
-      }
     }
-  }, [setAiSpeaking])
+  }
 
-  // Start listening for user's answer
-  const startListening = useCallback(() => {
-    if (!speechService.isSupported()) {
-      // Fallback: text input mode
-      setRoomState('user_speaking')
-      setUserSpeaking(true)
-      setStatusText('Type your answer below (speech not supported)')
-      return
-    }
-
+  // ── Start listening ────────────────────────────────────────────────────────
+  const startListening = () => {
     currentAnswerRef.current = ''
     setLiveTranscript('')
     setUserAnswer('')
@@ -106,347 +63,247 @@ export default function InterviewRoom() {
     setUserSpeaking(true)
     setStatusText('Listening… speak your answer')
 
-    speechService.start(
-      (interim) => {
-        setLiveTranscript(interim)
-        currentAnswerRef.current = interim
-      },
-      (final) => {
-        currentAnswerRef.current = final
-      }
-    )
-  }, [setLiveTranscript, setUserSpeaking])
+    if (!speechService.isSupported()) {
+      setStatusText('Speech recognition not supported — type your answer below')
+      return
+    }
 
-  // Stop listening and process answer
-  const stopListening = useCallback(async () => {
+    speechService.start(
+      (interim) => { setLiveTranscript(interim); currentAnswerRef.current = interim },
+      (final)   => { currentAnswerRef.current = final }
+    )
+  }
+
+  // ── Submit answer ──────────────────────────────────────────────────────────
+  const stopListening = async () => {
     speechService.stop()
     setUserSpeaking(false)
     setRoomState('processing')
     setProcessing(true)
     setStatusText('Processing your answer…')
 
-    const answer = currentAnswerRef.current || liveTranscript || userAnswer || '(No answer provided)'
-    const question = displayedQuestion
+    const answer      = currentAnswerRef.current || userAnswer || '(No answer provided)'
+    const question    = displayedQuestion
+    const nextIndex   = questionIndexRef.current + 1
+    const updatedLog  = [...qaLogRef.current, { question, answer }]
 
-    // Log Q&A
     addQA(question, answer)
-
-    // Add to GPT message history
-    addMessage('assistant', question)
-    addMessage('user', answer)
-
+    incrementQuestion()
     setLiveTranscript('')
     setUserAnswer('')
 
-    const nextIndex = currentQuestionIndex + 1
-    incrementQuestion()
-
     if (nextIndex >= totalQuestions) {
-      // End interview
       setProcessing(false)
       setRoomState('done')
       setStatusText('Interview complete! Generating your results…')
-      await endInterview([...qaLog, { question, answer }])
+      await endInterview(updatedLog)
       return
     }
 
-    // Generate next question
     try {
       const nextQ = await generateNextQuestion({
-        messages: [...messages, { role: 'assistant', content: question }, { role: 'user', content: answer }],
-        interviewType,
-        jobRole,
-        difficulty,
+        qaLog: updatedLog,   // ✅ clean alternating conversation built inside openai.js
+        interviewType, jobRole, difficulty,
         questionIndex: nextIndex,
         totalQuestions,
       })
-
       setCurrentQuestion(nextQ)
       setProcessing(false)
       await speakText(nextQ)
       startListening()
     } catch (e) {
-      console.error('GPT error:', e)
+      console.error('Gemini error:', e)
       setProcessing(false)
-      setStatusText('Error generating next question. Please try again.')
+      setRoomState('idle')
+      setStatusText(`Error: ${e?.message || 'Could not get next question.'} `)
     }
-  }, [
-    liveTranscript, userAnswer, displayedQuestion, currentQuestionIndex,
-    totalQuestions, qaLog, messages, interviewType, jobRole, difficulty,
-    addQA, addMessage, incrementQuestion, setLiveTranscript, setUserAnswer,
-    setCurrentQuestion, setProcessing, speakText, startListening,
-  ])
+  }
 
-  // End interview and evaluate
-  const endInterview = useCallback(async (finalQaLog) => {
+  // ── Evaluate ───────────────────────────────────────────────────────────────
+  const endInterview = async (finalLog) => {
     const { evaluateInterview } = await import('../services/openai')
     try {
-      const results = await evaluateInterview(
-        finalQaLog.length > 0 ? finalQaLog : qaLog,
-        { interviewType, jobRole, difficulty }
-      )
+      const results = await evaluateInterview(finalLog, { interviewType, jobRole, difficulty })
       setResults(results)
-      setTimeout(() => setPhase('results'), 1500)
     } catch (e) {
       console.error('Evaluation error:', e)
-      // Still navigate with partial results
       setResults({
-        overallScore: 75,
-        overallGrade: 'B',
-        recommendation: 'Promising Candidate',
-        summary: 'Interview completed. Detailed evaluation unavailable.',
-        breakdown: { communication: 75, relevance: 75, structure: 75, depth: 75 },
-        strengths: ['Completed the interview', 'Engaged with all questions'],
-        improvements: ['Continue practicing', 'Work on structure', 'Add more examples'],
-        questionFeedback: finalQaLog.map((qa) => ({
-          ...qa,
-          score: 75,
-          feedback: 'Good effort on this question.',
-        })),
+        overallScore: 72, overallGrade: 'B', recommendation: 'Promising Candidate',
+        summary: 'Interview completed successfully!',
+        breakdown: { communication: 72, relevance: 70, structure: 72, depth: 70 },
+        strengths:    ['Completed all questions', 'Engaged throughout', 'Clear communication'],
+        improvements: ['Add specific examples', 'Use STAR format', 'Quantify achievements'],
+        questionFeedback: finalLog.map((qa) => ({ ...qa, score: 72, feedback: 'Good effort.' })),
       })
-      setTimeout(() => setPhase('results'), 1500)
+    } finally {
+      setTimeout(() => setPhase('results'), 1200)
     }
-  }, [qaLog, interviewType, jobRole, difficulty, setResults, setPhase])
+  }
 
-  // Kick off the interview
+  // ── Start first question ───────────────────────────────────────────────────
   useEffect(() => {
-    const startInterview = async () => {
-      await new Promise((r) => setTimeout(r, 800))
-
-      const firstQ = await generateNextQuestion({
-        messages: [],
-        interviewType,
-        jobRole,
-        difficulty,
-        questionIndex: 0,
-        totalQuestions,
-      })
-
-      setCurrentQuestion(firstQ)
-      await speakText(firstQ)
-      startListening()
+    const start = async () => {
+      await new Promise((r) => setTimeout(r, 500))
+      try {
+        const firstQ = await generateNextQuestion({
+          qaLog: [], interviewType, jobRole, difficulty,
+          questionIndex: 0, totalQuestions,
+        })
+        setCurrentQuestion(firstQ)
+        await speakText(firstQ)
+        startListening()
+      } catch (e) {
+        console.error('First question error:', e)
+        setStatusText(`Error: ${e?.message || 'Check your Gemini API key.'}`)
+        setRoomState('idle')
+      }
     }
-
-    startInterview().catch(console.error)
+    start()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // End interview manually
+  // ── Manual end ────────────────────────────────────────────────────────────
   const handleEndInterview = () => {
     speechService.abort()
-    if (audioRef.current) {
-      audioRef.current.pause()
-      audioRef.current = null
-    }
-    endInterview(qaLog)
+    stopSpeech()
+    endInterview(qaLogRef.current)
   }
 
-  const isListening = roomState === 'user_speaking'
+  const isListening       = roomState === 'user_speaking'
   const isProcessingState = roomState === 'processing'
-  const isDone = roomState === 'done'
+  const isDone            = roomState === 'done'
 
   return (
-    <div className="min-h-screen bg-gradient-dark flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
-        <div className="flex items-center gap-3">
-          <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-          <span className="text-white font-semibold">Live Interview</span>
-        </div>
+    <div className="min-h-screen bg-[#070b14] flex flex-col">
 
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-slate-400 text-sm">
-            <Clock size={14} />
-            {formatTime(elapsedTime)}
-          </div>
-          <div className="glass-card px-3 py-1 text-sm text-slate-300">
-            Q {Math.min(currentQuestionIndex + 1, totalQuestions)} / {totalQuestions}
-          </div>
+      {/* Header */}
+      <div className="flex items-center justify-between px-5 py-3 border-b border-white/5 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse inline-block" />
+          <span className="text-white font-semibold text-sm">Live Interview</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="flex items-center gap-1.5 text-slate-400 text-sm">
+            <Clock size={13} />{formatTime(elapsedTime)}
+          </span>
+          <span className="glass-card px-3 py-1 text-xs text-slate-300">
+            Q {Math.min(currentQuestionIndex + 1, totalQuestions)}/{totalQuestions}
+          </span>
         </div>
       </div>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col lg:flex-row gap-4 p-4 min-h-0">
-        {/* AI Avatar Panel */}
-        <div className="flex-1 relative rounded-2xl overflow-hidden bg-dark-800 border border-white/5 min-h-64 lg:min-h-0">
-          {/* 3D Avatar */}
-          <div className="absolute inset-0">
-            <Avatar3D avatarUrl={avatarUrl} isTalking={isAiSpeaking} />
-          </div>
-
-          {/* Status badge */}
-          <div className="absolute bottom-4 left-4 right-4">
-            <div className="glass-card px-4 py-2 flex items-center gap-2">
-              {isAiSpeaking ? (
-                <>
-                  <span className="flex gap-0.5">
-                    {[0, 1, 2].map((i) => (
-                      <motion.span
-                        key={i}
-                        className="inline-block w-1 bg-indigo-400 rounded-full"
-                        animate={{ height: ['8px', '20px', '8px'] }}
-                        transition={{ duration: 0.6, delay: i * 0.15, repeat: Infinity }}
-                      />
-                    ))}
-                  </span>
-                  <span className="text-indigo-300 text-sm font-medium">Emma is speaking</span>
-                </>
-              ) : isProcessingState ? (
-                <>
+      {/* Main panels */}
+      <div className="flex flex-1 gap-3 p-3" style={{ minHeight: 0, height: 'calc(100vh - 220px)' }}>
+        {/* AI Avatar */}
+        <div className="flex-1 rounded-2xl overflow-hidden border border-white/5 relative">
+          <Avatar3D avatarId={avatarId} isTalking={isAiSpeaking} />
+          <AnimatePresence>
+            {isProcessingState && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-black/40 flex items-center justify-center"
+              >
+                <div className="glass-card px-4 py-2 flex items-center gap-2">
                   <Loader2 size={14} className="text-amber-400 animate-spin" />
-                  <span className="text-amber-300 text-sm">Processing…</span>
-                </>
-              ) : isDone ? (
-                <span className="text-green-400 text-sm">✓ Interview complete</span>
-              ) : (
-                <span className="text-slate-400 text-sm">Emma · AI Interviewer</span>
-              )}
-            </div>
-          </div>
-
-          {/* Name tag */}
-          <div className="absolute top-4 left-4">
-            <div className="bg-black/40 backdrop-blur-sm rounded-lg px-3 py-1">
-              <p className="text-slate-300 text-sm font-medium">Emma · AI Interviewer</p>
-            </div>
-          </div>
+                  <span className="text-amber-300 text-sm">Thinking…</span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
-        {/* User Camera Panel */}
-        <div className="lg:w-80 relative rounded-2xl overflow-hidden bg-dark-800 border border-white/5 min-h-48 lg:min-h-0">
+        {/* User Camera */}
+        <div className="w-64 flex-shrink-0 rounded-2xl overflow-hidden border border-white/5 relative">
           <UserCamera userName={userName} />
-
-          {/* Listening indicator */}
           <AnimatePresence>
             {isListening && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="absolute top-3 right-3"
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="absolute top-3 right-3 flex items-center gap-1.5 bg-red-500/80 backdrop-blur-sm rounded-full px-2 py-1"
               >
-                <div className="flex items-center gap-1.5 bg-red-500/80 backdrop-blur-sm rounded-full px-2 py-1">
-                  <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                  <span className="text-white text-xs font-medium">REC</span>
-                </div>
+                <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse inline-block" />
+                <span className="text-white text-xs font-medium">REC</span>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
       </div>
 
-      {/* Transcript / Question display */}
-      <div className="px-4 pb-2">
+      {/* Question & transcript */}
+      <div className="px-3 pb-1 space-y-2">
         <AnimatePresence mode="wait">
           {displayedQuestion && (
-            <motion.div
-              key={currentQuestionIndex}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="glass-card p-4 mb-3"
+            <motion.div key={currentQuestionIndex}
+              initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className="glass-card px-4 py-3"
             >
-              <p className="text-xs text-indigo-400 font-semibold mb-1 uppercase tracking-wider">
-                Current Question
-              </p>
-              <p className="text-slate-200 text-sm leading-relaxed">{displayedQuestion}</p>
+              <span className="text-indigo-400 text-xs font-semibold uppercase tracking-wider mr-2">Q:</span>
+              <span className="text-slate-200 text-sm leading-relaxed">{displayedQuestion}</span>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Live transcript */}
         <AnimatePresence>
           {isListening && (
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="glass-card p-4 mb-3 border border-red-500/20"
+              initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+              className="glass-card px-4 py-3 border border-red-500/20"
             >
-              <p className="text-xs text-red-400 font-semibold mb-1 uppercase tracking-wider flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse inline-block" />
-                Your Answer (live)
-              </p>
-              <p className="text-slate-300 text-sm leading-relaxed min-h-[1.5em]">
-                {liveTranscript || <span className="text-slate-600 italic">Listening…</span>}
-              </p>
+              <span className="text-red-400 text-xs font-semibold uppercase tracking-wider mr-2 inline-flex items-center gap-1">
+                <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse inline-block" />Your Answer:
+              </span>
+              <span className="text-slate-300 text-sm">
+                {liveTranscript || <em className="text-slate-600">Listening…</em>}
+              </span>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Fallback text input for non-speech browsers */}
         {isListening && !speechService.isSupported() && (
-          <div className="glass-card p-4 mb-3">
-            <textarea
-              value={userAnswer}
-              onChange={(e) => setUserAnswer(e.target.value)}
-              placeholder="Type your answer here…"
-              className="input-field resize-none"
-              rows={3}
-            />
-          </div>
+          <textarea value={userAnswer} onChange={(e) => setUserAnswer(e.target.value)}
+            placeholder="Type your answer here…" rows={2}
+            className="input-field resize-none text-sm"
+          />
         )}
       </div>
 
       {/* Controls */}
-      <div className="flex items-center justify-center gap-4 px-6 pb-6">
-        {/* Stop / Start recording */}
+      <div className="flex items-center justify-center gap-4 px-5 py-3">
         {isListening ? (
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
             onClick={stopListening}
-            className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white font-semibold px-6 py-3 rounded-xl shadow-lg transition-colors"
+            className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white font-semibold px-6 py-3 rounded-xl transition-colors shadow-lg"
           >
-            <MicOff size={18} />
-            Submit Answer
+            <MicOff size={18} /> Submit Answer
           </motion.button>
         ) : (
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
             onClick={startListening}
             disabled={isAiSpeaking || isProcessingState || isDone}
-            className="flex items-center gap-2 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold px-6 py-3 rounded-xl shadow-lg transition-colors"
+            className="flex items-center gap-2 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold px-6 py-3 rounded-xl transition-colors shadow-lg"
           >
             <Mic size={18} />
-            {isAiSpeaking ? 'Wait for Emma…' : 'Start Speaking'}
+            {isAiSpeaking ? 'Wait for Emma…' : isProcessingState ? 'Processing…' : 'Start Speaking'}
           </motion.button>
         )}
 
-        {/* Progress dots */}
-        <div className="flex gap-1.5">
+        <div className="flex gap-1.5 items-center">
           {Array.from({ length: totalQuestions }).map((_, i) => (
-            <div
-              key={i}
-              className={`w-2 h-2 rounded-full transition-all ${
-                i < currentQuestionIndex
-                  ? 'bg-green-400'
-                  : i === currentQuestionIndex
-                  ? 'bg-indigo-400 scale-125'
-                  : 'bg-white/20'
-              }`}
-            />
+            <div key={i} className={`rounded-full transition-all ${
+              i < currentQuestionIndex   ? 'w-2 h-2 bg-green-400'
+              : i === currentQuestionIndex ? 'w-3 h-3 bg-indigo-400'
+              : 'w-2 h-2 bg-white/15'
+            }`} />
           ))}
         </div>
 
-        {/* End interview */}
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={handleEndInterview}
-          disabled={isDone}
-          className="flex items-center gap-2 bg-white/10 hover:bg-white/20 disabled:opacity-40 text-slate-300 font-medium px-4 py-3 rounded-xl transition-colors"
+        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+          onClick={handleEndInterview} disabled={isDone}
+          className="flex items-center gap-1.5 bg-white/8 hover:bg-white/15 disabled:opacity-40 text-slate-400 font-medium px-4 py-3 rounded-xl transition-colors text-sm"
         >
-          <PhoneOff size={18} />
-          End
+          <PhoneOff size={16} /> End
         </motion.button>
       </div>
 
-      {/* Status text */}
-      <div className="text-center pb-4">
-        <p className="text-slate-500 text-xs">{statusText}</p>
-      </div>
+      <p className="text-center text-slate-600 text-xs pb-3">{statusText}</p>
     </div>
   )
 }

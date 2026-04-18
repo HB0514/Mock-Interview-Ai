@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Sparkles, KeyRound, User, ArrowRight, Mic } from 'lucide-react'
+import { KeyRound, User, ArrowRight, Mic } from 'lucide-react'
 import useInterviewStore from '../store/useInterviewStore'
 import { initOpenAI } from '../services/openai'
 
@@ -13,11 +13,9 @@ export default function Landing() {
 
   const { setUserInfo, setPhase } = useInterviewStore()
 
-  const handleStart = async () => {
+  const handleStart = () => {
     if (!name.trim()) return setError('Please enter your name')
-    if (!apiKey.trim() || !apiKey.startsWith('sk-')) {
-      return setError('Please enter a valid OpenAI API key (starts with sk-)')
-    }
+    if (!apiKey.trim()) return setError('Please enter your Gemini API key')
 
     setLoading(true)
     setError('')
@@ -33,8 +31,7 @@ export default function Landing() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-dark flex items-center justify-center p-6">
-      {/* Animated background orbs */}
+    <div className="min-h-screen bg-[#070b14] flex items-center justify-center p-6">
       <div className="orb orb-1" />
       <div className="orb orb-2" />
       <div className="orb orb-3" />
@@ -51,19 +48,18 @@ export default function Landing() {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-            className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-primary mb-5 shadow-glow"
+            className="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-5 shadow-[0_0_30px_rgba(99,102,241,0.4)]"
+            style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)' }}
           >
             <Mic size={36} className="text-white" />
           </motion.div>
           <h1 className="text-4xl font-bold text-white mb-2">
             Interview<span className="text-gradient">AI</span>
           </h1>
-          <p className="text-slate-400 text-base">
-            Your AI-powered mock interview coach
-          </p>
+          <p className="text-slate-400 text-base">Your AI-powered mock interview coach</p>
         </div>
 
-        {/* Features row */}
+        {/* Feature pills */}
         <div className="flex gap-3 mb-8">
           {['AI Interviewer', 'Voice Q&A', 'Instant Feedback'].map((f, i) => (
             <motion.div
@@ -78,14 +74,14 @@ export default function Landing() {
           ))}
         </div>
 
-        {/* Form Card */}
+        {/* Form */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
           className="glass-card p-8 space-y-5"
         >
-          {/* Name field */}
+          {/* Name */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
               <User size={14} /> Your Name
@@ -100,10 +96,10 @@ export default function Landing() {
             />
           </div>
 
-          {/* API Key field */}
+          {/* Gemini API Key */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
-              <KeyRound size={14} /> OpenAI API Key
+              <KeyRound size={14} /> Gemini API Key
             </label>
             <div className="relative">
               <input
@@ -111,7 +107,7 @@ export default function Landing() {
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleStart()}
-                placeholder="sk-..."
+                placeholder="AIza..."
                 className="input-field pr-16"
               />
               <button
@@ -123,7 +119,16 @@ export default function Landing() {
               </button>
             </div>
             <p className="text-xs text-slate-500">
-              Your key stays in the browser and is never stored.
+              무료 키 발급 →{' '}
+              <a
+                href="https://aistudio.google.com/app/apikey"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-indigo-400 hover:text-indigo-300 underline"
+              >
+                aistudio.google.com
+              </a>
+              {' '}· 브라우저에만 저장, 서버 전송 없음
             </p>
           </div>
 
@@ -142,18 +147,12 @@ export default function Landing() {
             disabled={loading}
             className="btn-primary w-full flex items-center justify-center gap-2"
           >
-            {loading ? (
-              <span className="spinner" />
-            ) : (
-              <>
-                Get Started <ArrowRight size={18} />
-              </>
-            )}
+            {loading ? <span className="spinner" /> : <><span>Get Started</span> <ArrowRight size={18} /></>}
           </button>
         </motion.div>
 
         <p className="text-center text-slate-600 text-xs mt-6">
-          Powered by GPT-4o · TTS-1 · Ready Player Me
+          Powered by Gemini 1.5 Flash · Browser TTS · 100% Free
         </p>
       </motion.div>
     </div>

@@ -1,66 +1,58 @@
 import { create } from 'zustand'
 
-const useInterviewStore = create((set, get) => ({
+const useInterviewStore = create((set) => ({
   // User info
   userName: '',
   apiKey: '',
 
-  // Avatar
-  avatarUrl: null, // RPM GLB URL
+  // Avatar — stores an ID like 'robot', 'fox', 'cat' …
+  avatarId: 'robot',
 
   // Interview config
-  interviewType: null, // 'behavioral' | 'pm' | 'swe' | 'marketing' | 'design'
+  interviewType: null,
   jobRole: '',
-  difficulty: 'intermediate', // 'beginner' | 'intermediate' | 'senior'
+  difficulty: 'intermediate',
 
   // App phase
-  phase: 'landing', // 'landing' | 'avatar' | 'setup' | 'interview' | 'results'
+  phase: 'landing',
 
   // Conversation
-  messages: [],       // full GPT conversation history
-  qaLog: [],          // [{question, answer}] for display and evaluation
+  messages: [],
+  qaLog: [],
   currentQuestion: '',
   currentQuestionIndex: 0,
   totalQuestions: 6,
 
-  // Interview runtime state
+  // Runtime state
   isAiSpeaking: false,
   isUserSpeaking: false,
   isProcessing: false,
-  liveTranscript: '',  // real-time speech recognition text
-  interviewStarted: false,
+  liveTranscript: '',
 
   // Results
   results: null,
 
-  // Actions
+  // ── Actions ─────────────────────────────────────────────────
   setUserInfo: (userName, apiKey) => set({ userName, apiKey }),
-  setAvatarUrl: (url) => set({ avatarUrl: url }),
+  setAvatarId: (id) => set({ avatarId: id }),
   setInterviewConfig: (interviewType, jobRole, difficulty) =>
     set({ interviewType, jobRole, difficulty }),
   setPhase: (phase) => set({ phase }),
 
   addMessage: (role, content) =>
-    set((state) => ({
-      messages: [...state.messages, { role, content }],
-    })),
+    set((state) => ({ messages: [...state.messages, { role, content }] })),
 
   addQA: (question, answer) =>
-    set((state) => ({
-      qaLog: [...state.qaLog, { question, answer }],
-    })),
+    set((state) => ({ qaLog: [...state.qaLog, { question, answer }] })),
 
   setCurrentQuestion: (q) => set({ currentQuestion: q }),
   incrementQuestion: () =>
-    set((state) => ({
-      currentQuestionIndex: state.currentQuestionIndex + 1,
-    })),
+    set((state) => ({ currentQuestionIndex: state.currentQuestionIndex + 1 })),
 
   setAiSpeaking: (val) => set({ isAiSpeaking: val }),
   setUserSpeaking: (val) => set({ isUserSpeaking: val }),
   setProcessing: (val) => set({ isProcessing: val }),
   setLiveTranscript: (text) => set({ liveTranscript: text }),
-  setInterviewStarted: (val) => set({ interviewStarted: val }),
   setResults: (results) => set({ results }),
 
   reset: () =>
@@ -73,10 +65,9 @@ const useInterviewStore = create((set, get) => ({
       isUserSpeaking: false,
       isProcessing: false,
       liveTranscript: '',
-      interviewStarted: false,
       results: null,
       phase: 'landing',
-      avatarUrl: null,
+      avatarId: 'robot',
     }),
 }))
 

@@ -1,205 +1,115 @@
-import { useRef, useEffect, Suspense } from 'react'
-import { Canvas, useFrame } from '@react-three/fiber'
-import { useGLTF, OrbitControls, Environment, ContactShadows } from '@react-three/drei'
-import * as THREE from 'three'
+// CSS/Emoji based avatar — no Three.js dependency needed
+import { motion } from 'framer-motion'
 
-// Head-only morph targets for RPM avatars (standard naming)
-const MOUTH_MORPHS = ['mouthOpen', 'viseme_aa', 'viseme_O']
-
-function RPMModel({ url, isTalking }) {
-  const group = useRef()
-  const { scene } = useGLTF(url)
-  const clock = useRef(0)
-
-  // Clone scene to avoid mutation issues
-  useEffect(() => {
-    scene.traverse((node) => {
-      if (node.isMesh) {
-        node.castShadow = true
-      }
-    })
-  }, [scene])
-
-  useFrame((state, delta) => {
-    clock.current += delta
-    if (!group.current) return
-
-    // Subtle idle breathing
-    group.current.position.y = Math.sin(clock.current * 0.8) * 0.008
-
-    // Find head/teeth meshes for lip sync
-    scene.traverse((node) => {
-      if (!node.isMesh || !node.morphTargetDictionary || !node.morphTargetInfluences) return
-
-      MOUTH_MORPHS.forEach((morphName) => {
-        const idx = node.morphTargetDictionary[morphName]
-        if (idx === undefined) return
-
-        if (isTalking) {
-          // Realistic talking: random mouth movement
-          const wave = Math.abs(Math.sin(clock.current * 7 + idx)) * 0.6
-          const noise = Math.abs(Math.sin(clock.current * 13 + idx * 2)) * 0.3
-          node.morphTargetInfluences[idx] = THREE.MathUtils.lerp(
-            node.morphTargetInfluences[idx],
-            wave + noise,
-            0.25
-          )
-        } else {
-          // Close mouth smoothly
-          node.morphTargetInfluences[idx] = THREE.MathUtils.lerp(
-            node.morphTargetInfluences[idx],
-            0,
-            0.15
-          )
-        }
-      })
-
-      // Subtle eye blink
-      const blinkIdx = node.morphTargetDictionary['eyeBlinkLeft']
-      const blinkIdxR = node.morphTargetDictionary['eyeBlinkRight']
-      const blinkCycle = clock.current % 4
-      const isBlinking = blinkCycle > 3.8
-
-      if (blinkIdx !== undefined) {
-        node.morphTargetInfluences[blinkIdx] = THREE.MathUtils.lerp(
-          node.morphTargetInfluences[blinkIdx],
-          isBlinking ? 1 : 0,
-          0.3
-        )
-      }
-      if (blinkIdxR !== undefined) {
-        node.morphTargetInfluences[blinkIdxR] = THREE.MathUtils.lerp(
-          node.morphTargetInfluences[blinkIdxR],
-          isBlinking ? 1 : 0,
-          0.3
-        )
-      }
-    })
-
-    // Subtle head sway when talking
-    if (isTalking && group.current) {
-      group.current.rotation.y = Math.sin(clock.current * 1.5) * 0.04
-      group.current.rotation.z = Math.sin(clock.current * 1.1) * 0.015
-    } else if (group.current) {
-      group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, 0, 0.05)
-      group.current.rotation.z = THREE.MathUtils.lerp(group.current.rotation.z, 0, 0.05)
-    }
-  })
-
-  return (
-    <group ref={group} position={[0, -0.8, 0]}>
-      <primitive object={scene} />
-    </group>
-  )
+export const AVATAR_CONFIGS = {
+  robot:   { emoji: '🤖', name: 'Robo',   bg: 'from-cyan-500 to-blue-600' },
+  fox:     { emoji: '🦊', name: 'Fiona',  bg: 'from-orange-400 to-red-500' },
+  cat:     { emoji: '🐱', name: 'Cleo',   bg: 'from-purple-400 to-pink-500' },
+  panda:   { emoji: '🐼', name: 'Pablo',  bg: 'from-slate-400 to-gray-700' },
+  unicorn: { emoji: '🦄', name: 'Uma',    bg: 'from-pink-400 to-violet-500' },
+  frog:    { emoji: '🐸', name: 'Felix',  bg: 'from-green-400 to-emerald-600' },
+  owl:     { emoji: '🦉', name: 'Oscar',  bg: 'from-amber-400 to-orange-600' },
+  penguin: { emoji: '🐧', name: 'Penny',  bg: 'from-blue-400 to-indigo-600' },
 }
 
-function FallbackAvatar({ isTalking }) {
-  const meshRef = useRef()
-  const clock = useRef(0)
-
-  useFrame((_, delta) => {
-    clock.current += delta
-    if (!meshRef.current) return
-    meshRef.current.position.y = Math.sin(clock.current * 0.8) * 0.05
-    meshRef.current.rotation.y = isTalking ? Math.sin(clock.current * 3) * 0.08 : 0
-  })
-
+// Animated sound-wave bars
+function SoundWave({ active }) {
+  const bars = [0.4, 0.9, 0.6, 1, 0.7, 0.5, 0.8]
   return (
-    <group ref={meshRef}>
-      {/* Head */}
-      <mesh position={[0, 0.5, 0]}>
-        <sphereGeometry args={[0.5, 32, 32]} />
-        <meshStandardMaterial color="#6366f1" roughness={0.3} metalness={0.1} />
-      </mesh>
-      {/* Body */}
-      <mesh position={[0, -0.4, 0]}>
-        <cylinderGeometry args={[0.35, 0.45, 0.8, 32]} />
-        <meshStandardMaterial color="#4f46e5" roughness={0.3} />
-      </mesh>
-      {/* Eyes */}
-      <mesh position={[-0.18, 0.56, 0.44]}>
-        <sphereGeometry args={[0.07, 16, 16]} />
-        <meshStandardMaterial color="white" />
-      </mesh>
-      <mesh position={[0.18, 0.56, 0.44]}>
-        <sphereGeometry args={[0.07, 16, 16]} />
-        <meshStandardMaterial color="white" />
-      </mesh>
-      {/* Pupils */}
-      <mesh position={[-0.18, 0.56, 0.5]}>
-        <sphereGeometry args={[0.04, 16, 16]} />
-        <meshStandardMaterial color="#1e1b4b" />
-      </mesh>
-      <mesh position={[0.18, 0.56, 0.5]}>
-        <sphereGeometry args={[0.04, 16, 16]} />
-        <meshStandardMaterial color="#1e1b4b" />
-      </mesh>
-      {/* Mouth - scales when talking */}
-      <TalkingMouth isTalking={isTalking} />
-    </group>
-  )
-}
-
-function TalkingMouth({ isTalking }) {
-  const ref = useRef()
-  const clock = useRef(0)
-
-  useFrame((_, delta) => {
-    clock.current += delta
-    if (!ref.current) return
-    const scale = isTalking ? 0.5 + Math.abs(Math.sin(clock.current * 8)) * 0.5 : 0.15
-    ref.current.scale.y = THREE.MathUtils.lerp(ref.current.scale.y, scale, 0.3)
-  })
-
-  return (
-    <mesh ref={ref} position={[0, 0.3, 0.48]} scale={[1, 0.15, 1]}>
-      <sphereGeometry args={[0.12, 16, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2]} />
-      <meshStandardMaterial color="#1e1b4b" />
-    </mesh>
-  )
-}
-
-function Loader() {
-  return (
-    <mesh>
-      <sphereGeometry args={[0.3, 16, 16]} />
-      <meshStandardMaterial color="#6366f1" wireframe />
-    </mesh>
-  )
-}
-
-export default function Avatar3D({ avatarUrl, isTalking }) {
-  return (
-    <Canvas
-      camera={{ position: [0, 0.3, 1.8], fov: 35 }}
-      shadows
-      style={{ background: 'transparent' }}
-    >
-      <ambientLight intensity={0.6} />
-      <directionalLight
-        position={[2, 3, 2]}
-        intensity={1.2}
-        castShadow
-        shadow-mapSize={[1024, 1024]}
-      />
-      <pointLight position={[-2, 2, 1]} intensity={0.4} color="#8b5cf6" />
-      <pointLight position={[2, -1, 1]} intensity={0.2} color="#06b6d4" />
-
-      <Suspense fallback={<Loader />}>
-        {avatarUrl ? (
-          <RPMModel url={avatarUrl} isTalking={isTalking} />
-        ) : (
-          <FallbackAvatar isTalking={isTalking} />
-        )}
-        <ContactShadows
-          position={[0, -1.2, 0]}
-          opacity={0.4}
-          scale={3}
-          blur={2}
-          far={2}
+    <div className="flex items-center gap-[3px] h-8">
+      {bars.map((base, i) => (
+        <motion.div
+          key={i}
+          className="w-1 rounded-full bg-white/70"
+          animate={
+            active
+              ? { height: ['4px', `${base * 28 + 4}px`, '4px'] }
+              : { height: '4px' }
+          }
+          transition={{
+            duration: 0.45,
+            delay: i * 0.06,
+            repeat: active ? Infinity : 0,
+            repeatType: 'loop',
+          }}
         />
-        <Environment preset="city" />
-      </Suspense>
-    </Canvas>
+      ))}
+    </div>
+  )
+}
+
+// Pulsing ring around the avatar
+function PulseRing({ active, color }) {
+  if (!active) return null
+  return (
+    <>
+      {[1, 2].map((i) => (
+        <motion.div
+          key={i}
+          className="absolute inset-0 rounded-full border-2 border-white/20"
+          animate={{ scale: [1, 1.15 + i * 0.08], opacity: [0.5, 0] }}
+          transition={{ duration: 1.2, delay: i * 0.3, repeat: Infinity }}
+        />
+      ))}
+    </>
+  )
+}
+
+export default function Avatar3D({ avatarId, isTalking }) {
+  const config = AVATAR_CONFIGS[avatarId] || AVATAR_CONFIGS.robot
+
+  return (
+    <div className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden bg-[#0d1220]">
+      {/* Soft gradient background glow */}
+      <div className={`absolute inset-0 bg-gradient-to-br ${config.bg} opacity-10`} />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(99,102,241,0.08)_0%,transparent_70%)]" />
+
+      {/* Outer ring container */}
+      <div className="relative flex items-center justify-center mb-6">
+        {/* Pulse rings */}
+        <div className="relative">
+          <PulseRing active={isTalking} />
+
+          {/* Avatar circle */}
+          <motion.div
+            animate={
+              isTalking
+                ? { y: [0, -6, 0, -4, 0], scale: [1, 1.03, 1, 1.02, 1] }
+                : { y: 0, scale: 1 }
+            }
+            transition={
+              isTalking
+                ? { duration: 0.5, repeat: Infinity, repeatType: 'loop' }
+                : { duration: 0.4 }
+            }
+            className={`w-36 h-36 rounded-full bg-gradient-to-br ${config.bg} flex items-center justify-center shadow-2xl`}
+            style={{ fontSize: '5rem' }}
+          >
+            {config.emoji}
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Name + sound wave badge */}
+      <div className="flex flex-col items-center gap-2">
+        <div className="bg-black/40 backdrop-blur-sm rounded-2xl px-5 py-2.5 flex items-center gap-3">
+          <SoundWave active={isTalking} />
+          <div>
+            <p className="text-white font-semibold text-sm leading-tight">{config.name}</p>
+            <p className="text-slate-400 text-xs">AI Interviewer</p>
+          </div>
+        </div>
+
+        {/* Status text */}
+        <motion.p
+          key={isTalking ? 'speaking' : 'idle'}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className={`text-xs font-medium ${isTalking ? 'text-indigo-400' : 'text-slate-600'}`}
+        >
+          {isTalking ? '● Speaking…' : '○ Waiting for your answer'}
+        </motion.p>
+      </div>
+    </div>
   )
 }
