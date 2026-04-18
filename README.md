@@ -73,13 +73,13 @@ Open `http://localhost:5173` in your browser.
 | Layer | Technology |
 |-------|-----------|
 | Frontend | React 18 + Vite |
-| AI Question & Evaluation | Gemini |
-| AI Voice Output | OpenAI TTS-1 (Nova) |
-| Speech Recognition (STT) | Web Speech API |
-| 3D Avatar | Ready Player Me |
-| 3D Rendering & Lip Sync | @react-three/fiber + drei |
+| AI (Q&A + Evaluation) | Gemini |
+| Voice Output | OpenAI TTS-1 (optional) |
+| Speech Recognition | Web Speech API |
+| Avatar | Ready Player Me |
+| 3D Rendering | @react-three/fiber + drei |
 | State Management | Zustand |
-| Page Transitions | Framer Motion |
+| Animation | Framer Motion |
 
 ---
 
@@ -88,10 +88,10 @@ Open `http://localhost:5173` in your browser.
 ```
 Landing → AvatarSelect → InterviewSetup → InterviewRoom → Results
                                                 ↑
-                                      [GPT-4o: question generation]
+                                      [Gemini: question generation]
                                       [TTS-1:  voice output]
                                       [Web Speech: voice input]
-                                      [GPT-4o: answer evaluation]
+                                      [Gemini: answer evaluation]
 ```
 
 ### Interview Room State Machine
@@ -105,6 +105,10 @@ idle
                       ⋮
                       └→ results  (after final question)
 ```
+
+## System Flow
+
+Landing → AvatarSelect → InterviewSetup → InterviewRoom → Results****
 
 ---
 
