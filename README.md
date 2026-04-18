@@ -1,10 +1,9 @@
 # InterviewAI — AI Mock Interview Coach
 
-> AI-powered mock interview coach built with GPT-4o · OpenAI TTS · Ready Player Me 3D Avatar
+> AI-powered mock interview coach built with Gemini · OpenAI TTS · Ready Player Me 3D Avatar
 
 ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react)
 ![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite)
-![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4o-412991?logo=openai)
 
 ---
 
@@ -21,7 +20,7 @@ Most people practice interviews without knowing what they're doing wrong. Interv
 ### Prerequisites
 
 - **Node.js** 18+
-- **OpenAI API Key** (`sk-...`)
+- **Gemini API Key** (`sk-...`)
 - **Chrome or Edge** — required for Web Speech API (speech recognition)
 - **Webcam** — optional, app works without it
 
@@ -44,7 +43,7 @@ Open `http://localhost:5173` in your browser.
 
 | Screen | Description |
 |--------|-------------|
-| Landing | Enter your name and OpenAI API key |
+| Landing | Enter your name and Gemini API key |
 | Avatar Select | Customize a 3D avatar via Ready Player Me iframe |
 | Interview Setup | Choose interview type and experience level |
 | Interview Room | Zoom-style UI — AI avatar speaks questions, you answer by voice |
