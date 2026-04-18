@@ -2,7 +2,6 @@
 
 > AI-powered mock interview coach built with GPT-4o · OpenAI TTS · Ready Player Me 3D Avatar
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react)
 ![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite)
 ![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4o-412991?logo=openai)
@@ -165,8 +164,4 @@ This project was built for a hackathon. Issues and PRs are welcome!
 4. Push to the branch (`git push origin feature/your-feature`)
 5. Open a Pull Request
 
----
 
-## License
-
-MIT License — free to use, modify, and distribute.
