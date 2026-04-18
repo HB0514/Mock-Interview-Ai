@@ -1,247 +1,172 @@
-<<<<<<< HEAD
-# 🎤 InterviewAI — AI Mock Interview Coach
+# InterviewAI — AI Mock Interview Coach
 
-해커톤 프로젝트: GPT-4o + OpenAI TTS + Ready Player Me 3D 아바타로 구현한 AI 모의 면접 코치
+> AI-powered mock interview coach built with GPT-4o · OpenAI TTS · Ready Player Me 3D Avatar
 
-## 실행 방법
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react)
+![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite)
+![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4o-412991?logo=openai)
+
+---
+
+## Overview
+
+**InterviewAI** is an AI-powered mock interview platform where an AI interviewer asks role-specific questions in real time, analyzes your responses, and delivers actionable feedback — instantly.
+
+Most people practice interviews without knowing what they're doing wrong. InterviewAI solves that by explaining **why** your answer is weak and **exactly how** to improve it.
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- **Node.js** 18+
+- **OpenAI API Key** (`sk-...`)
+- **Chrome or Edge** — required for Web Speech API (speech recognition)
+- **Webcam** — optional, app works without it
+
+### Installation
 
 ```bash
+git clone https://github.com/your-username/interview-ai.git
+cd interview-ai
 npm install
 npm run dev
 ```
 
-브라우저에서 http://localhost:5173 열기 (Chrome/Edge 권장)
+Open `http://localhost:5173` in your browser.
 
-## 필요한 것
+> Your API key is entered on the **Landing screen** inside the app. Never hardcode it in the source.
 
-- **OpenAI API Key** — 앱 내 Landing 화면에서 입력 (sk-...)
-- **Chrome 또는 Edge** — Web Speech API (음성 인식) 지원용
-- **웹캠** (선택) — 없어도 동작함
+---
 
-## 기능
+## Features
 
-| 화면 | 설명 |
-|------|------|
-| Landing | 이름 + OpenAI API 키 입력 |
-| Avatar Select | Ready Player Me iframe으로 3D 아바타 커스터마이즈 |
-| Interview Setup | 면접 유형 (Behavioral / PM / SWE / Marketing / Design) + 경력 레벨 선택 |
-| Interview Room | Zoom 스타일 UI — AI 아바타(음성)가 질문, 유저가 음성으로 답변 |
-| Results | 전체 점수 + 항목별 분석 + 질문별 피드백 |
+| Screen | Description |
+|--------|-------------|
+| Landing | Enter your name and OpenAI API key |
+| Avatar Select | Customize a 3D avatar via Ready Player Me iframe |
+| Interview Setup | Choose interview type and experience level |
+| Interview Room | Zoom-style UI — AI avatar speaks questions, you answer by voice |
+| Results | Overall score, dimension breakdown, and per-question feedback |
 
-## 기술 스택
+### Interview Types
 
-- **React 18** + Vite
-- **OpenAI GPT-4o** — 질문 생성, 면접 평가
-- **OpenAI TTS-1 (Nova)** — AI 음성 출력
-- **Web Speech API** — 유저 음성 인식 (STT)
-- **Ready Player Me** — 3D 하프바디 아바타
-- **@react-three/fiber + drei** — 3D 아바타 렌더링 + 립싱크 애니메이션
-- **Zustand** — 전역 상태 관리
-- **Framer Motion** — 페이지 전환 애니메이션
+- Behavioral
+- Product Manager (PM)
+- Software Engineer (SWE)
+- Marketing
+- Design
 
-## 아키텍처
+### Answer Evaluation Dimensions
+
+| Dimension | What's Measured |
+|-----------|-----------------|
+| Structure | Logical flow, STAR method usage |
+| Content | Role relevance, specificity of examples |
+| Impact | Use of metrics, measurable outcomes |
+| Delivery | Answer length, clarity |
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 18 + Vite |
+| AI Question & Evaluation | OpenAI GPT-4o |
+| AI Voice Output | OpenAI TTS-1 (Nova) |
+| Speech Recognition (STT) | Web Speech API |
+| 3D Avatar | Ready Player Me |
+| 3D Rendering & Lip Sync | @react-three/fiber + drei |
+| State Management | Zustand |
+| Page Transitions | Framer Motion |
+
+---
+
+## Architecture
 
 ```
 Landing → AvatarSelect → InterviewSetup → InterviewRoom → Results
-                                              ↑
-                                    [GPT-4o: 질문 생성]
-                                    [TTS-1: 음성 출력]
-                                    [Web Speech: 음성 입력]
-                                    [GPT-4o: 평가 생성]
+                                                ↑
+                                      [GPT-4o: question generation]
+                                      [TTS-1:  voice output]
+                                      [Web Speech: voice input]
+                                      [GPT-4o: answer evaluation]
 ```
 
-## Interview Room 상태 머신
+### Interview Room State Machine
 
 ```
-idle → ai_speaking → user_speaking → processing → ai_speaking → ...
-                                                       ↓ (마지막 질문 후)
-                                                    results
+idle
+  └→ ai_speaking       (AI reads the question aloud)
+       └→ user_speaking (user records voice answer)
+            └→ processing (GPT-4o analyzes the response)
+                 └→ ai_speaking  (next question)
+                      ⋮
+                      └→ results  (after final question)
 ```
-=======
-# AI Interview Coach
-
-An AI-powered interview coaching platform that provides real-time, personalized feedback to help users improve their interview performance.
 
 ---
 
-## Problem Statement
+## Problem & Solution
 
-Many students and job seekers struggle with interview preparation:
+### The Problem
 
-- Practicing alone is difficult  
-- No clear feedback on answers  
-- Hard to identify weaknesses  
-- Generic online resources are not personalized  
+- Practicing alone is difficult — no real feedback loop
+- Generic online resources aren't personalized
+- Hard to know *why* an answer falls flat
 
-Core Problem:  
-Users do not know why their answers are weak or how to improve them.
+### Our Solution
 
----
+Instead of vague feedback like *"Your answer is weak"*, InterviewAI tells you:
 
-## Solution Overview
+> "Your answer lacks quantified impact. Consider adding measurable results such as % improvement or revenue impact."
 
-### AI Interview Coach (Real-time + Personalized)
+**Before / After Example:**
 
-This platform:
-- Simulates real interview scenarios  
-- Analyzes user responses  
-- Provides actionable feedback  
-- Generates improved answers  
-
-Goal:  
-Replace passive practice with active, personalized coaching.
-
----
-
-## Key Features (MVP)
-
-### 1. Interview Simulation
-- Role-based questions (e.g., Data Analyst, Business Analyst)  
-- Optional Job Description input  
-- Contextual interview questions  
-
----
-
-### 2. Answer Analysis
-
-User responses are evaluated across four dimensions:
-
-**Structure**
-- Logical flow  
-- STAR method usage  
-
-**Content**
-- Relevance to the role  
-- Specificity of examples  
-
-**Impact**
-- Use of metrics (percentages, numbers, outcomes)  
-- Clear results  
-
-**Delivery**
-- Length appropriateness  
-- Clarity  
-
----
-
-### 3. Scoring System
-
-Example:
-
-- Structure: 6 / 10  
-- Content: 7 / 10  
-- Impact: 5 / 10  
-- Delivery: 8 / 10  
-
-Total Score: 6.5 / 10
-
----
-
-### 4. Actionable Feedback (Core Differentiator)
-
-Instead of generic feedback:
-
-"Your answer is weak"
-
-This system provides:
-
-"Your answer lacks quantified impact. Consider adding measurable results such as percentage improvement or business outcomes."
-
----
-
-### 5. Improved Answer Generation
-
-User Answer:
-I worked on a project and improved things.
-
-Improved Answer:
-I led a project where I improved user retention by 15% by analyzing behavioral data and implementing targeted recommendations.
-
-This makes improvement clear and actionable.
-
----
-
-## Product Structure
-
-- Landing Page  
-  Problem introduction and call to action  
-
-- Setup Page  
-  Role selection, experience level, optional Job Description input  
-
-- Interview Page  
-  Displays question and collects user response (text or voice)  
-
-- Feedback Dashboard  
-  Score breakdown, weakness analysis, suggestions, improved answer  
-
----
-
-## Technical Approach
-
-- NLP-based response evaluation  
-- Keyword extraction  
-- Structure detection (rule-based or LLM)  
-- LLM-generated feedback and improved responses  
-
-Note:  
-A full machine learning model is not required for the MVP.  
-The focus is on logic, usability, and clear feedback.
-
----
-
-## Differentiation
-
-Existing tools:
-- Provide generic questions  
-- Offer limited feedback  
-
-This system:
-- Explains why answers are weak  
-- Provides specific guidance on how to improve them  
+| | Answer |
+|---|--------|
+| Before | "I worked on a project and improved things." |
+| After | "I led a project where I improved user retention by 15% by analyzing behavioral data and implementing targeted recommendations." |
 
 ---
 
 ## Target Users
 
-- College students  
-- Internship applicants  
-- Job seekers  
-- International students preparing for interviews  
+- College students preparing for internships or full-time roles
+- Career changers entering a new industry
+- International students preparing for English-language interviews
+- Anyone who wants structured, honest feedback on their answers
 
 ---
 
-## Why This Idea Works
+## Project Structure
 
-- Highly relatable problem  
-- Easy to demonstrate  
-- Strong AI use case  
-- Clear before-and-after comparison  
-
----
-
-## Pitch Summary
-
-Most people practice interviews, but they do not know what they are doing wrong.  
-This system analyzes responses and provides actionable feedback so users can improve immediately.
+```
+src/
+├── components/        # Reusable UI components
+├── pages/             # Landing, AvatarSelect, Setup, InterviewRoom, Results
+├── store/             # Zustand global state
+├── hooks/             # Custom hooks (speech recognition, etc.)
+└── utils/             # GPT prompts, TTS helpers, scoring logic
+```
 
 ---
 
-## Team Roles
+## Contributing
 
-- Frontend: UI and user flow  
-- AI/Logic: response evaluation and feedback generation  
-- Product/Presentation: story, slides, and demo  
+This project was built for a hackathon. Issues and PRs are welcome!
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/your-feature`)
+3. Commit your changes (`git commit -m 'Add your feature'`)
+4. Push to the branch (`git push origin feature/your-feature`)
+5. Open a Pull Request
 
 ---
 
-## MVP Goal
+## License
 
-Build a working prototype that:
-- Simulates interview questions  
-- Accepts user answers  
-- Provides structured feedback  
-- Shows improved answers  
-
-Focus on clarity, usability, and demo impact.
->>>>>>> c1691b9946b0b2d1130bc4a7ab94ad8c374c618a
+MIT License — free to use, modify, and distribute.
