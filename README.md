@@ -93,6 +93,27 @@ Open `http://localhost:5173` in your browser.
 | Interview Room | Zoom-style UI — AI avatar speaks questions, you answer by voice |
 | Results | Overall score, dimension breakdown, and per-question feedback |
 
+## Demo Screens
+
+### Main Screen
+![Main Screen](./screenshots/main-screen.png)
+
+### Avatar Select
+![Avatar Select](./screenshots/avatar-select.png)
+
+### Interview Setup
+![Interview Setup](./screenshots/setup-screen.png)
+
+### Interview Room
+![Interview Room](./screenshots/interview-room.png)
+
+### Strong Performance Example
+![Good Results Overview](./screenshots/good-results-overview.png)
+
+![Good Results Detail](./screenshots/good-results-detail.png)
+
+### Improvement Needed Example
+![Bad Results Overview](./screenshots/bad-results-overview.png)
 
 ### Answer Evaluation Dimensions
 
