@@ -155,6 +155,7 @@ idle
 - Real-time AI UX depends heavily on flow control and latency handling
 - Good interview feedback needs structure, not just general encouragement
 - Small product choices can make an AI experience feel much more human
+
 ---
 
 ## Target Users
@@ -174,7 +175,7 @@ src/
 ├── pages/             # Landing, AvatarSelect, Setup, InterviewRoom, Results
 ├── store/             # Zustand global state
 ├── hooks/             # Custom hooks (speech recognition, etc.)
-└── utils/             # GPT prompts, TTS helpers, scoring logic
+└── utils/             # AI prompts, TTS helpers, scoring logic
 ```
 
 ---
