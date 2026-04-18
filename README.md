@@ -108,7 +108,7 @@ idle
 
 ## System Flow
 
-Landing → AvatarSelect → InterviewSetup → InterviewRoom → Results****
+Landing → AvatarSelect → InterviewSetup → InterviewRoom → Results
 
 ---
 
