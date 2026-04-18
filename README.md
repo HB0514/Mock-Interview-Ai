@@ -73,7 +73,7 @@ Open `http://localhost:5173` in your browser.
 | Layer | Technology |
 |-------|-----------|
 | Frontend | React 18 + Vite |
-| AI Question & Evaluation | OpenAI GPT-4o |
+| AI Question & Evaluation | Gemini |
 | AI Voice Output | OpenAI TTS-1 (Nova) |
 | Speech Recognition (STT) | Web Speech API |
 | 3D Avatar | Ready Player Me |
