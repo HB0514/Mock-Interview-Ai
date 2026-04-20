@@ -1,8 +1,6 @@
 # InterviewAI — AI Mock Interview Coach
 AI-powered mock interview coach built with Gemini, OpenAI TTS, and Ready Player Me.
 
-![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)
 
 ---
 
